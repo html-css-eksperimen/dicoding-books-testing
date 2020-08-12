@@ -21,28 +21,32 @@ function main() {
         const listBookElement = document.querySelector('#listBook');
         listBookElement.innerHTML = '';
 
-        books.forEach((book) => {
-            listBookElement.innerHTML += /* html */ `
-            <div class="col-lg-4 col-md-6 col-sm-12" style="margin-top: 12px;">
-                <div class="card">
-                    <div class="card-body">
-                        <h5>(${book.id}) ${book.title}</h5>
-                        <p>${book.author}</p>
-                        <button type="button" class="btn btn-danger button-delete" id="${book.id}">Hapus</button>
+        if (books && books.length > 0) {
+            books.forEach((book) => {
+                listBookElement.innerHTML += /* html */ `
+                <div class="col-lg-4 col-md-6 col-sm-12" style="margin-top: 12px;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>(${book.id}) ${book.title}</h5>
+                            <p>${book.author}</p>
+                            <button type="button" class="btn btn-danger button-delete" id="${book.id}">Hapus</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-        });
-
-        const buttons = document.querySelectorAll('.button-delete');
-        buttons.forEach((button) => {
-            button.addEventListener('click', (event) => {
-                const bookId = event.target.id;
-                // eslint-disable-next-line no-use-before-define
-                removeBook(bookId);
+            `;
             });
-        });
+
+            const buttons = document.querySelectorAll('.button-delete');
+            buttons.forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    const bookId = event.target.id;
+                    // eslint-disable-next-line no-use-before-define
+                    removeBook(bookId);
+                });
+            });
+        } else {
+            listBookElement.innerHTML = '';
+        }
     };
 
     const getBook = () => {
@@ -102,6 +106,8 @@ function main() {
                     );
                     showResponseMessage(respJson.message);
                 }
+            } else {
+                throw new Error(`Error request ${responses}`);
             }
         } catch (err) {
             console.log(err);
@@ -111,112 +117,99 @@ function main() {
 
     const insertBook = (book) => {
         // tuliskan kode di sini!
-        const insertReq = new XMLHttpRequest();
-
-        insertReq.addEventListener('load', (event) => {
-            const { status, responseText } = event.target;
-            const responseJson = JSON.parse(responseText);
-
-            if (status === 200 && !responseJson.error) {
-                getBook();
-            }
-
-            showResponseMessage(responseJson.message);
-        });
-
-        insertReq.addEventListener('error', (event) => {
-            console.log(event.target);
-            showResponseMessage('Gagal memasukkan data');
-        });
-
-        insertReq.addEventListener('abort', (event) => {
-            console.log(event.target);
-            showResponseMessage('Request dibatalkan');
-        });
-
-        insertReq.responseType = 'text';
-        insertReq.open('POST', URL_ADDBOOKDICO);
-
-        // Mementapkan properti Content-Type dan X-Auth-Token pada Header request
-        insertReq.setRequestHeader('Content-Type', 'application/json');
-        insertReq.setRequestHeader('X-Auth-Token', '12345');
-
-        // Mengirimkan request dan menyisipkan JSON.stringify(book) pada body
-        insertReq.send(JSON.stringify(book));
+        fetch(URL_ADDBOOKDICO, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Auth-Token': '12345',
+            },
+            body: JSON.stringify(book),
+        })
+            .then((response) => {
+                if (response.status === 200) {
+                    return response.json();
+                }
+                throw new Error('Gagal insert data', response.status);
+            })
+            .then((responseJson) => {
+                if (responseJson.error) {
+                    throw new Error(
+                        'Gagal memasukkan data JSON',
+                        responseJson.message,
+                    );
+                } else {
+                    showResponseMessage(responseJson.message);
+                    getBook();
+                }
+            })
+            .catch((error) => {
+                console.log(error);
+                showResponseMessage(error.message);
+            });
     };
 
-    const updateBook = (book) => {
+    const updateBook = async (book) => {
         // tuliskan kode di sini!
         const urlUpdate = getUpdateUrl(book);
+        const optionsFetch = {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Auth-Token': '12345',
+            },
+            body: JSON.stringify(book),
+        };
 
-        const reqUpdate = new XMLHttpRequest();
-        reqUpdate.addEventListener('load', (event) => {
-            console.log(event.target);
-
-            const { status, responseText } = event.target;
-            const responseJson = JSON.parse(responseText);
-
-            if (status === 200 && !responseJson.error) {
-                getBook();
+        try {
+            const response = await fetch(urlUpdate, optionsFetch);
+            let responseJson = {};
+            if (response.status === 200) {
+                responseJson = await response.json();
+                if (!responseJson.error) {
+                    showResponseMessage(responseJson.message);
+                    getBook();
+                } else {
+                    throw new Error('Gagal memperbarui buku', response.status);
+                }
             } else {
-                console.log('Error ambil buku', status);
+                throw new Error('Gagal memperbarui buku', response.status);
             }
-
-            showResponseMessage(responseJson.message);
-        });
-
-        reqUpdate.addEventListener('error', (event) => {
-            console.log(event.target, 'Gagal mengirim data');
-            showResponseMessage('Gagal mengirim data');
-        });
-
-        reqUpdate.addEventListener('abort', (event) => {
-            console.log(event.target);
-            showResponseMessage('Request dibatalkan');
-        });
-
-        reqUpdate.responseType = 'text';
-        reqUpdate.open('PUT', urlUpdate);
-
-        // Mementapkan properti Content-Type dan X-Auth-Token pada Header request
-        reqUpdate.setRequestHeader('Content-Type', 'application/json');
-        reqUpdate.setRequestHeader('X-Auth-Token', '12345');
-
-        // Mengirimkan request dan menyisipkan JSON.stringify(book) pada body
-        reqUpdate.send(JSON.stringify(book));
+        } catch (err) {
+            console.log(err);
+            showResponseMessage(err.message);
+        }
     };
 
-    const removeBook = (bookId) => {
+    const removeBook = async (bookId) => {
         // tuliskan kode di sini!
-        const reqXhr = new XMLHttpRequest();
+        const urlDelete = getDeleteUrl(bookId);
+        const optionReq = {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Auth-Token': '12345',
+            },
+        };
 
-        reqXhr.addEventListener('load', (event) => {
-            const { status, responseText } = event.target;
-            const responseJson = JSON.parse(responseText);
+        try {
+            const response = await fetch(urlDelete, optionReq);
 
-            if (status === 200 && !responseJson.error) {
-                getBook();
+            if (response.status === 200) {
+                const responseJson = await response.json();
+
+                if (!responseJson.error) {
+                    showResponseMessage(responseJson.message);
+                    getBookAsync();
+                } else {
+                    throw new Error('Gagal menghapus buku');
+                }
+            } else {
+                throw new Error('Gagal menghapus buku');
             }
-
-            showResponseMessage(responseJson.message);
-        });
-
-        reqXhr.addEventListener('error', (event) => {
-            console.log(event.target);
-            showResponseMessage('Gagal menghapus data');
-        });
-
-        reqXhr.addEventListener('abort', (event) => {
-            console.log(event.target);
-            showResponseMessage('Permintaan hapus dibatalkan');
-        });
-
-        reqXhr.responseType = 'text';
-        reqXhr.open('DELETE', getDeleteUrl(bookId));
-        reqXhr.setRequestHeader('Content-Type', 'application/json');
-        reqXhr.setRequestHeader('X-Auth-Token', '12345');
-
-        reqXhr.send();
+        } catch (err) {
+            console.log(err);
+            showResponseMessage(err.message);
+        }
     };
 
     document.addEventListener('DOMContentLoaded', () => {

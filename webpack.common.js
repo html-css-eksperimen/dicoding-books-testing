@@ -21,7 +21,12 @@ module.exports = {
         path: path.resolve(__dirname, 'dist'),
     },
     module: {
-        rules: [],
+        rules: [
+            {
+                test: /\.jpe?g$|\.ico$|\.gif$|\.png$|\.svg$|\.woff$|\.ttf$|\.wav$|\.mp3$/,
+                loader: 'file-loader?name=[name].[ext]',
+            },
+        ],
     },
     plugins: [
         new HtmlWebPackPlugin({
@@ -29,6 +34,7 @@ module.exports = {
             filename: 'index.html',
             scriptLoading: 'defer',
             inject: 'body',
+            favicon: './src/favicon.png',
         }),
     ],
     devServer: {
