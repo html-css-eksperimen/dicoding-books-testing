@@ -14,6 +14,14 @@ module.exports = {
             maxSize: 100000,
             maxAsyncRequests: 30,
             maxInitialRequests: 30,
+            cacheGroups: {
+                styles: {
+                    name: 'styles',
+                    test: /\.css$/,
+                    chunks: 'all',
+                    enforce: true,
+                },
+            },
         },
     },
     output: {
