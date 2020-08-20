@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const glob = require('glob');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { merge } = require('webpack-merge');
@@ -16,34 +15,15 @@ const PATHS = {
 
 const prodConf = {
     mode: 'production',
-    entry: path.resolve(__dirname, 'src', 'index.js'),
     optimization: {
         minimizer: [
-            new UglifyJsPlugin({
-                uglifyOptions: {
-                    output: {
-                        comments: false,
-                    },
-                    mangle: true,
-                    compress: {
-                        sequences: true,
-                        dead_code: true,
-                        conditionals: true,
-                        booleans: true,
-                        unused: true,
-                        if_return: true,
-                        join_vars: true,
-                        drop_console: true,
-                    },
-                },
-                parallel: true,
-                sourceMap: true,
-            }),
             new TerserPlugin({
                 parallel: true,
                 sourceMap: true,
                 extractComments: false,
                 terserOptions: {
+                    ecma: 5,
+                    mangle: true,
                     output: {
                         comments: false,
                     },
@@ -63,10 +43,6 @@ const prodConf = {
             }),
         ],
     },
-    output: {
-        filename: '[name].bundle.js',
-        path: path.resolve(__dirname, 'dist'),
-    },
     module: {
         rules: [
             {
@@ -75,10 +51,20 @@ const prodConf = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env'],
+                        presets: [
+                            [
+                                '@babel/preset-env',
+                                { targets: '> 0.25%, not dead' },
+                            ],
+                        ],
                         plugins: [
                             '@babel/plugin-proposal-object-rest-spread',
-                            '@babel/plugin-transform-runtime',
+                            [
+                                '@babel/plugin-transform-runtime',
+                                {
+                                    regenerator: true,
+                                },
+                            ],
                         ],
                     },
                 },
