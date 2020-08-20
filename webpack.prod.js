@@ -7,6 +7,7 @@ const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { merge } = require('webpack-merge');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const PurgecssPlugin = require('purgecss-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 const common = require('./webpack.common');
 
 const PATHS = {
@@ -90,6 +91,9 @@ const prodConf = {
         }),
         new PurgecssPlugin({
             paths: glob.sync(`${PATHS.src}/**/*`, { nodir: true }),
+        }),
+        new CopyPlugin({
+            patterns: [{ from: 'src/img', to: './img' }],
         }),
     ],
 };
